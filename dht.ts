@@ -152,8 +152,8 @@ class Node extends events.EventEmitter {
     public async pong(rpcId: string, info: dgram.RemoteInfo) {
         return new Promise((res, rej) => {
             this.socket.send(JSON.stringify({
-            type: 'PONG',
-            rpcId,
+                type: 'PONG',
+                rpcId,
             }), info.port, info.address, (error, bytes) => {
                 if (error) {
                     return rej(error);
