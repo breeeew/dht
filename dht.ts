@@ -297,25 +297,3 @@ interface IConnectOptions {
 }
 
 type TType = 'PING' | 'PONG';
-
-
-function index2(a1, b1) {
-
-    function xor(a, b) {
-        const length = Math.max(a.length, b.length);
-        const buffer = Buffer.allocUnsafe(length);
-
-        for (let i = 0; i < length; ++i) {
-            buffer[i] = a[i] ^ b[i];
-        }
-
-        return buffer;
-    }
-
-    function distance(a, b) {
-        return xor(a, b);
-    };
-
-    const d = distance(a1, b1);
-    return d.readUIntBE(0, 1);
-}
