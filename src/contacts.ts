@@ -1,0 +1,136 @@
+import * as dgram from 'dgram';
+import {bucketIndex, xor} from './utils';
+import {K_BUCKET_SIZE, HASH_SIZE} from './constants';
+import {KBucket} from './bucket';
+import * as dht from 'kademlia';
+
+export class Contacts {
+    private readonly buckets: Map<number, KBucket>;
+    private readonly _store: Map<string, string>;
+    private me: dht.IContact;
+
+    constructor() {
+        this.buckets = new Map();
+        this._store = new Map();
+    }
+
+    private getBucket(remote: dht.IContact) {
+        const index = bucketIndex(this.me.nodeId, remote.nodeId);
+
+        if (!this.buckets.has(index)) {
+            const bucket = new KBucket({
+                maxContacts: K_BUCKET_SIZE,
+            });
+
+            this.buckets.set(index, bucket);
+        }
+
+        return this.buckets.get(index);
+    }
+
+    public setMe(me: dht.IContact) {
+        this.me = me;
+    }
+
+    public async addContacts(contact: dht.IContact|Array<dht.IContact>) {
+        const contacts = Array.isArray(contact)
+            ? contact : [contact];
+
+        const promises: Array<Promise<unknown>> = [];
+
+        for (const c of contacts) {
+            const bucket = this.getBucket(c);
+            promises.push(bucket.updateContact(c));
+        }
+
+        await Promise.all(contacts);
+    }
+
+    public findNode(key: Buffer, count: number = K_BUCKET_SIZE): Array<dht.IContact> {
+        const contacts: Array<{
+            distance: Buffer;
+            contact: dht.IContact;
+        }> = [];
+
+        const closestBucketIndex = bucketIndex(key, this.me.nodeId);
+        let aboveIndex = closestBucketIndex + 1;
+        let belowIndex = closestBucketIndex - 1;
+
+        const canIterateAbove = () => {
+            return aboveIndex !== HASH_SIZE; // 159
+        };
+
+        const canIterateBelow = () => {
+            return belowIndex > 0;
+        };
+
+        const proc = (bucket: KBucket) => {
+            for (const contact of bucket.getContacts()) {
+                if (contact.nodeId.equals(key)) {
+                    continue;
+                }
+
+                if (contacts.length === count) {
+                    break;
+                }
+
+                contacts.push({
+                    distance: xor(contact.nodeId, key),
+                    contact,
+                });
+            }
+        };
+
+        proc(this.buckets.get(closestBucketIndex));
+
+        while (true) {
+            if (contacts.length === count || (!canIterateBelow() && !canIterateAbove())) {
+                break;
+            }
+
+            while (canIterateAbove()) {
+                if (this.buckets.has(aboveIndex)) {
+                    proc(this.buckets.get(aboveIndex));
+                    aboveIndex++;
+                    break;
+                }
+
+                aboveIndex++;
+            }
+
+            while (canIterateBelow()) {
+                if (this.buckets.has(belowIndex)) {
+                    proc(this.buckets.get(belowIndex));
+                    belowIndex--;
+                    break;
+                }
+
+                belowIndex--;
+            }
+        }
+
+        contacts.sort((a, b) => a.distance.compare(b.distance));
+        return contacts.map(c => c.contact);
+    }
+
+    public async findValue(key: string): Promise<string|Array<dht.IContact>> {
+        if (this._store.has(key)) {
+            return this._store.get(key);
+        }
+
+        return this.findNode(Buffer.from(key, 'hex'));
+    }
+
+    public store(message: dht.TStoreRPC, info: dgram.RemoteInfo) {
+        /**
+         * TODO:
+         *  - reply
+         *  - chunked data
+         *  - handle errors, like I/O, disk size...
+         *  - send result
+         */
+        const {data} = message;
+        const {key, block} = data;
+        this._store.set(key, block);
+    }
+}
