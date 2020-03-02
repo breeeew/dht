@@ -2,19 +2,19 @@ import * as dgram from 'dgram';
 import {bucketIndex, xor} from './utils';
 import {K_BUCKET_SIZE, HASH_SIZE} from './constants';
 import {KBucket} from './bucket';
-import * as dht from 'kademlia';
+import {kademlia} from './kademlia';
 
 export class Contacts {
     private readonly buckets: Map<number, KBucket>;
     private readonly _store: Map<string, string>;
-    private me: dht.IContact;
+    private me: kademlia.IContact;
 
     constructor() {
         this.buckets = new Map();
         this._store = new Map();
     }
 
-    private getBucket(remote: dht.IContact) {
+    private getBucket(remote: kademlia.IContact) {
         const index = bucketIndex(this.me.nodeId, remote.nodeId);
 
         if (!this.buckets.has(index)) {
@@ -28,11 +28,11 @@ export class Contacts {
         return this.buckets.get(index);
     }
 
-    public setMe(me: dht.IContact) {
+    public setMe(me: kademlia.IContact) {
         this.me = me;
     }
 
-    public async addContacts(contact: dht.IContact|Array<dht.IContact>) {
+    public async addContacts(contact: kademlia.IContact|Array<kademlia.IContact>) {
         const contacts = Array.isArray(contact)
             ? contact : [contact];
 
@@ -44,12 +44,13 @@ export class Contacts {
         }
 
         await Promise.all(contacts);
+        console.log(this.buckets.size);
     }
 
-    public findNode(key: Buffer, count: number = K_BUCKET_SIZE): Array<dht.IContact> {
+    public findNode(key: Buffer, count: number = K_BUCKET_SIZE): Array<kademlia.IContact> {
         const contacts: Array<{
             distance: Buffer;
-            contact: dht.IContact;
+            contact: kademlia.IContact;
         }> = [];
 
         const closestBucketIndex = bucketIndex(key, this.me.nodeId);
@@ -65,6 +66,10 @@ export class Contacts {
         };
 
         const proc = (bucket: KBucket) => {
+            if (!bucket) {
+                return;
+            }
+
             for (const contact of bucket.getContacts()) {
                 if (contact.nodeId.equals(key)) {
                     continue;
@@ -113,7 +118,7 @@ export class Contacts {
         return contacts.map(c => c.contact);
     }
 
-    public async findValue(key: string): Promise<string|Array<dht.IContact>> {
+    public async findValue(key: string): Promise<string|Array<kademlia.IContact>> {
         if (this._store.has(key)) {
             return this._store.get(key);
         }
@@ -121,7 +126,7 @@ export class Contacts {
         return this.findNode(Buffer.from(key, 'hex'));
     }
 
-    public store(message: dht.TStoreRPC, info: dgram.RemoteInfo) {
+    public store(message: kademlia.TStoreRPC, info: dgram.RemoteInfo) {
         /**
          * TODO:
          *  - reply

@@ -1,7 +1,7 @@
 import {HASH_SIZE} from './constants';
 import {createHash, BinaryLike} from 'crypto';
 import {RemoteInfo} from 'dgram';
-import * as dht from 'kademlia';
+import {kademlia} from './kademlia';
 
 export function xor(a: Buffer, b: Buffer) {
     const length = Math.max(a.length, b.length);
@@ -36,9 +36,9 @@ export function bucketIndex(a: Buffer, b: Buffer) {
     return B;
 }
 
-export function timeout(promise: Promise<unknown>, ttl: number) {
-    const timeoutPromise = new Promise((_, rej) => {
-        setTimeout(() => rej(new Error('timeout')), ttl);
+export function timeout<R = unknown>(promise: Promise<R>, ttl: number, error?: Error): Promise<never | R> {
+    const timeoutPromise = new Promise<R>((_, rej) => {
+        setTimeout(() => rej(error ?? new Error('timeout')), ttl);
     });
 
     return Promise.race([
@@ -51,7 +51,7 @@ export function sha1(str: BinaryLike) {
     return createHash('sha1').update(str);
 }
 
-export function makeContact(hexNodeId: string, info: RemoteInfo): dht.IContact {
+export function makeContact(hexNodeId: string, info: RemoteInfo): kademlia.IContact {
     return {
         nodeId: Buffer.from(hexNodeId, 'hex'),
         ip: info.address,

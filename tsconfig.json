@@ -5,10 +5,21 @@
         "removeComments": true,
         "sourceMap": false,
         "outDir": "dist",
-        "downlevelIteration": true
+        "downlevelIteration": true,
+        "lib": ["ESNext"],
+        "types": [
+            "kademlia",
+            "node"
+        ],
+        "typeRoots": ["src", "node_modules/@types"],
+        "baseUrl": "./",
+        "paths": {
+            "kademlia": ["src/kademlia.ts"]
+        }
     },
     "include": [
-        "src/**/*"
+        "src/**/*",
+        "src/kademlia.d.ts"
     ],
     "exclude": [
         "node_modules"

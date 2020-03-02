@@ -1,6 +1,4 @@
-declare module 'kademlia' {
-    import * as dgram from 'dgram';
-
+export namespace kademlia {
     export interface IContact {
         ip: string;
         port: number;
@@ -24,7 +22,13 @@ declare module 'kademlia' {
             ? IStoreMessage
             : T extends 'FIND_VALUE'
                 ? IFindValue
-                : void;
+                : T extends 'FIND_NODE'
+                    ? IFindNode
+                    : void;
+    }
+
+    export interface IFindNode {
+        contacts: Array<IContactJSON>;
     }
 
     export type TStoreRPC = IRPCMessage<'STORE'>;
@@ -67,6 +71,8 @@ declare module 'kademlia' {
         key: string;
     }
 
+    export type TFoundNodes = Array<IContact>;
+
     export type TType = (
         'PING'|
         'REPLY'|
@@ -81,16 +87,12 @@ declare module 'kademlia' {
         timeout?: number;
     }
 
-    interface IKBucket {
-
-    }
-
-    class Contacts {
-        private readonly buckets: Map<number, IKBucket>;
-        private readonly _store: Map<string, string>;
-        addContacts(me: IContact, contact: IContact|Array<IContact>): Promise<void>;
-        findNode(key: Buffer): Array<IContact>;
-        findValue(key: string): Promise<string|Array<IContact>>;
-        store(message: TStoreRPC, info: dgram.RemoteInfo): void;
+    export interface IContactJSON {
+        nodeId: {
+            type: 'Buffer';
+            data: Array<number>;
+        };
+        ip: string;
+        port: number;
     }
 }
