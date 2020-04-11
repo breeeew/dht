@@ -1,4 +1,3 @@
-export namespace kademlia {
     export interface IContact {
         ip: string;
         port: number;
@@ -97,7 +96,7 @@ export namespace kademlia {
         'FIND_VALUE'
     );
 
-    export interface IRPCOptions<T extends TType | unknown> {
+    export interface IRPCOptions<T> {
         rpcId?: string;
         data?: T extends TType ? IRPCArguments[T] : unknown;
         timeout?: number;
@@ -111,4 +110,3 @@ export namespace kademlia {
         ip: string;
         port: number;
     }
-}

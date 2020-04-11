@@ -9,18 +9,13 @@
         "target": "ESNext",
         "lib": ["ESNext"],
         "types": [
-            "kademlia",
             "node"
         ],
         "typeRoots": ["src", "node_modules/@types"],
-        "baseUrl": "./",
-        "paths": {
-            "kademlia": ["src/kademlia.ts"]
-        }
+        "baseUrl": "./"
     },
     "include": [
-        "src/**/*",
-        "src/kademlia.d.ts"
+        "src/**/*"
     ],
     "exclude": [
         "node_modules"

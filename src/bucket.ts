@@ -1,21 +1,21 @@
 import {Node} from './node';
-import {kademlia} from './kademlia';
+import {IContact, IKBucketOptions} from './types/kademlia';
 
 export class KBucket {
     private readonly maxContacts: number;
     private readonly node: Node;
-    private contacts: Array<kademlia.IContact>;
+    private contacts: Array<IContact>;
 
-    constructor(options: kademlia.IKBucketOptions) {
+    constructor(options: IKBucketOptions) {
         this.maxContacts = options.maxContacts;
         this.contacts = [];
     }
 
-    public getContacts(): Array<kademlia.IContact> {
+    public getContacts(): Array<IContact> {
         return this.contacts;
     }
 
-    public async updateContact(contact: kademlia.IContact) {
+    public async updateContact(contact: IContact) {
         const current = this.contacts.find(c => c.nodeId.equals(contact.nodeId));
 
         if (current) {
@@ -37,7 +37,7 @@ export class KBucket {
         }
     }
 
-    private moveToEnd(contact: kademlia.IContact) {
+    private moveToEnd(contact: IContact) {
         this.contacts = [
             ...this.contacts.filter(c => c !== contact),
             contact,

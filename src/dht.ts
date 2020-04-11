@@ -2,7 +2,7 @@ import {Contacts} from './contacts';
 import {Node} from './node';
 import {sha1, bucketIndex, chunk} from './utils';
 import {ALPHA, K_BUCKET_SIZE} from './constants';
-import {kademlia} from './kademlia';
+import {IDHTOptions, IContact, TFoundNodes} from './types/kademlia';
 
 export class DHT {
     private readonly contacts: Contacts;
@@ -19,7 +19,7 @@ export class DHT {
         return this.node.contact();
     }
 
-    public listen(options: kademlia.IDHTOptions) {
+    public listen(options: IDHTOptions) {
         return this.node.listen({
             port: options.port,
             address: options.address,
@@ -27,7 +27,7 @@ export class DHT {
         });
     }
 
-    public async join(contact: Omit<kademlia.IContact, 'nodeId'>) {
+    public async join(contact: Omit<IContact, 'nodeId'>) {
         /**
          * A node joins the network as follows:
             - if it does not already have a nodeID n, it generates one
@@ -49,11 +49,11 @@ export class DHT {
 
     public async store(key: string, block: string) {
         const closestNodes = await this.findNode(this.node.contact().nodeId);
-        const closestNodesChunked = chunk<kademlia.IContact>(closestNodes, ALPHA);
+        const closestNodesChunked = chunk<IContact>(closestNodes, ALPHA);
 
         for (const nodes of closestNodesChunked) {
             try {
-                const promises = nodes.map(node => this.node.callRPC<kademlia.IStoreMessage>('STORE', node, {
+                const promises = nodes.map(node => this.node.callRPC('STORE', node, {
                     data: {
                         key,
                         block,
@@ -73,11 +73,11 @@ export class DHT {
 
     public async findValue(key: string) {
         const closestNodes = await this.findNode(this.node.contact().nodeId);
-        const closestNodesChunked = chunk<kademlia.IContact>(closestNodes, ALPHA);
+        const closestNodesChunked = chunk<IContact>(closestNodes, ALPHA);
 
         for (const nodes of closestNodesChunked) {
             try {
-                const promises = nodes.map(node => this.node.callRPC<kademlia.IFindValue, kademlia.TFindResult>('FIND_VALUE', node, {
+                const promises = nodes.map(node => this.node.callRPC('FIND_VALUE', node, {
                     data: {
                         key,
                     },
@@ -95,13 +95,13 @@ export class DHT {
     }
 
     private async lookup(key: Buffer) {
-        const contacted = new Map<string, kademlia.IContact>();
+        const contacted = new Map<string, IContact>();
         const failed = new Set<string>();
         const shortlist = this.contacts.findNode(key, ALPHA);
 
         let currentClosestNode = shortlist[0];
 
-        const proc = async (promise: Promise<kademlia.TFoundNodes>, contact: kademlia.IContact) => {
+        const proc = async (promise: Promise<TFoundNodes>, contact: IContact) => {
             let hasCloserThanExist = false;
 
             try {
@@ -139,7 +139,7 @@ export class DHT {
                 if (contacted.has(contact.nodeId.toString('hex'))) {
                     continue;
                 }
-                const promise = this.node.callRPC<void, kademlia.TFoundNodes>('FIND_NODE', contact);
+                const promise = this.node.callRPC('FIND_NODE', contact);
                 promises.push(proc(promise, contact));
             }
 

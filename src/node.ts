@@ -2,13 +2,13 @@ import * as dgram from 'dgram';
 import * as crypto from 'crypto';
 import {Contacts} from './contacts';
 import {sha1, makeContact, timeout} from './utils';
-import {kademlia} from './kademlia';
+import {IContact, IRPCOptions, IResult, TType, IListenOptions, IRPCMessage, TStoreRPC, TFindValueRPC} from './types/kademlia';
 
 export class Node {
     private nodeId: Buffer;
     private socket: dgram.Socket;
     private contacts: Contacts;
-    private rpcMap: Map<string, {resolve: Function, type: kademlia.TType}>;
+    private rpcMap: Map<string, {resolve: Function, type: TType}>;
 
     constructor(options?: INodeOptions) {
         this.socket = dgram.createSocket('udp4');
@@ -18,7 +18,7 @@ export class Node {
         this.socket.on('message', this.handleRPC);
     }
 
-    public listen(options: kademlia.IListenOptions) {
+    public listen(options: IListenOptions) {
         this.nodeId = options.nodeId;
         return new Promise((res, rej) => {
             try {
@@ -40,19 +40,19 @@ export class Node {
             const me = this.contact();
             // console.log(`${me.nodeId.toString('hex')} got: ${msg} ${info.address}:${info.port} -> ${me.ip}:${me.port}`);
 
-            const message: kademlia.IRPCMessage<unknown> = JSON.parse(msg.toString());
+            const message: IRPCMessage<unknown> = JSON.parse(msg.toString());
             const remoteContact = makeContact(message.nodeId, info);
             await this.contacts.addContacts(remoteContact);
 
             switch (message.type) {
                 case 'REPLY':
-                    await this.handleReply(message.rpcId, (message as kademlia.IRPCMessage<'REPLY'>).data);
+                    await this.handleReply(message.rpcId, (message as IRPCMessage<'REPLY'>).data);
                     break;
                 case 'PING':
                     await this.pong(message.rpcId, remoteContact);
                     break;
                 case 'STORE':
-                    await this.contacts.store(message as kademlia.TStoreRPC, info);
+                    await this.contacts.store(message as TStoreRPC, info);
                     await this.replyRPC(remoteContact, {rpcId: message.rpcId});
                     break;
                 case 'FIND_NODE':
@@ -60,7 +60,7 @@ export class Node {
                     await this.sendNodes(message.rpcId, remoteContact, contacts);
                     break;
                 case 'FIND_VALUE':
-                    const result = await this.contacts.findValue((message as kademlia.TFindValueRPC).data.key);
+                    const result = await this.contacts.findValue((message as TFindValueRPC).data.key);
                     if (Array.isArray(result)) {
                         await this.sendNodes(message.rpcId, remoteContact, result);
                     } else {
@@ -76,7 +76,7 @@ export class Node {
         }
     }
 
-    public contact(): kademlia.IContact {
+    public contact(): IContact {
         const address = this.socket.address();
 
         return {
@@ -91,16 +91,16 @@ export class Node {
         this.socket.close();
     }
 
-    public ping(contact: kademlia.IContact) {
+    public ping(contact: IContact) {
         return this.callRPC('PING', contact);
     }
 
-    public pong(rpcId: string, contact: kademlia.IContact) {
+    public pong(rpcId: string, contact: IContact) {
         return this.replyRPC(contact, {rpcId});
     }
 
-    public sendNodes(rpcId: string, remoteContact: kademlia.IContact, contacts: Array<kademlia.IContact>) {
-        return this.replyRPC<kademlia.IReplyFindNode>(remoteContact, {
+    public sendNodes(rpcId: string, remoteContact: IContact, contacts: Array<IContact>) {
+        return this.replyRPC(remoteContact, {
             rpcId,
             data: {
                 contacts,
@@ -108,14 +108,14 @@ export class Node {
         });
     }
 
-    public sendValue(rpcId: string, remoteContact: kademlia.IContact, result: string) {
-        return this.replyRPC<typeof result>(remoteContact, {
+    public sendValue(rpcId: string, remoteContact: IContact, result: string) {
+        return this.replyRPC(remoteContact, {
             rpcId,
             data: result,
         });
     }
 
-    public handleReply(rpcId: string, data: kademlia.IRPCMessage<unknown>['data']) {
+    public handleReply(rpcId: string, data: IRPCMessage<unknown>['data']) {
         const rpc = this.rpcMap.get(rpcId);
         if (!rpc) {
             // Perhaps timed out
@@ -123,8 +123,8 @@ export class Node {
         }
 
         if (rpc.type === 'FIND_NODE') {
-            const {contacts} = (data as kademlia.IRPCMessage<'FIND_NODE'>['data']);
-            const result: Array<kademlia.IContact> = [];
+            const {contacts} = (data as IRPCMessage<'FIND_NODE'>['data']);
+            const result: Array<IContact> = [];
 
             for (const contact of contacts) {
                 result.push({
@@ -140,14 +140,14 @@ export class Node {
         this.rpcMap.get(rpcId)?.resolve(data);
     }
 
-    public async callRPC<T extends kademlia.TType>(
-        type: kademlia.TType,
-        contact: kademlia.IContact,
-        options: kademlia.IRPCOptions<T> = {},
-    ): Promise<kademlia.IResult[T]> {
+    public async callRPC<T extends TType>(
+        type: T,
+        contact: IContact,
+        options: IRPCOptions<T> = {},
+    ): Promise<IResult[T]> {
         const rpcId = options.rpcId || sha1(crypto.randomBytes(4).toString()).digest('hex');
 
-        const promise = new Promise<kademlia.IResult[T]>((resolve, reject) => {
+        const promise = new Promise<IResult[T]>((resolve, reject) => {
             const message = JSON.stringify({
                 type,
                 rpcId,
@@ -175,7 +175,7 @@ export class Node {
         try {
             const error = new Error(`timeout error: ${type}`);
             Error.captureStackTrace(error);
-            const result: kademlia.IResult[T] = await timeout(
+            const result: IResult[T] = await timeout(
                 promise,
                 options.timeout ?? 30000,
                 error,
@@ -187,8 +187,8 @@ export class Node {
         }
     }
 
-    private replyRPC<T>(contact: kademlia.IContact, options: kademlia.IRPCOptions<T>) {
-        return this.callRPC<'REPLY'>('REPLY', contact, options);
+    private replyRPC<T>(contact: IContact, options: T) {
+        return this.callRPC('REPLY', contact, options);
     }
 }
 

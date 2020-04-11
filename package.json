@@ -1,0 +1,29 @@
+{
+  "name": "dht",
+  "version": "1.0.0",
+  "description": "DHT Kademlia implementation on TypeScript",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/breeeew/dht.git"
+  },
+  "keywords": [
+    "DHT",
+    "Distributed",
+    "Hash",
+    "Table"
+  ],
+  "author": "Abdulla Bayramov",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/breeeew/dht/issues"
+  },
+  "homepage": "https://github.com/breeeew/dht#readme",
+  "dependencies": {
+    "@types/node": "^13.11.1",
+    "typescript": "^3.8.3"
+  }
+}

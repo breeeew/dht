@@ -2,19 +2,19 @@ import * as dgram from 'dgram';
 import {bucketIndex, xor} from './utils';
 import {K_BUCKET_SIZE, HASH_SIZE} from './constants';
 import {KBucket} from './bucket';
-import {kademlia} from './kademlia';
+import {IContact, TStoreRPC} from './types/kademlia';
 
 export class Contacts {
     private readonly buckets: Map<number, KBucket>;
     private readonly _store: Map<string, string>;
-    private me: kademlia.IContact;
+    private me: IContact;
 
     constructor() {
         this.buckets = new Map();
         this._store = new Map();
     }
 
-    private getBucket(remote: kademlia.IContact) {
+    private getBucket(remote: IContact) {
         const index = bucketIndex(this.me.nodeId, remote.nodeId);
 
         if (!this.buckets.has(index)) {
@@ -28,11 +28,11 @@ export class Contacts {
         return this.buckets.get(index);
     }
 
-    public setMe(me: kademlia.IContact) {
+    public setMe(me: IContact) {
         this.me = me;
     }
 
-    public async addContacts(contact: kademlia.IContact|Array<kademlia.IContact>) {
+    public async addContacts(contact: IContact|Array<IContact>) {
         const contacts = Array.isArray(contact)
             ? contact : [contact];
 
@@ -47,10 +47,10 @@ export class Contacts {
         console.log(this.buckets.size);
     }
 
-    public findNode(key: Buffer, count: number = K_BUCKET_SIZE): Array<kademlia.IContact> {
+    public findNode(key: Buffer, count: number = K_BUCKET_SIZE): Array<IContact> {
         const contacts: Array<{
             distance: Buffer;
-            contact: kademlia.IContact;
+            contact: IContact;
         }> = [];
 
         const closestBucketIndex = bucketIndex(key, this.me.nodeId);
@@ -118,7 +118,7 @@ export class Contacts {
         return contacts.map(c => c.contact);
     }
 
-    public async findValue(key: string): Promise<string|Array<kademlia.IContact>> {
+    public async findValue(key: string): Promise<string|Array<IContact>> {
         if (this._store.has(key)) {
             return this._store.get(key);
         }
@@ -126,7 +126,7 @@ export class Contacts {
         return this.findNode(Buffer.from(key, 'hex'));
     }
 
-    public store(message: kademlia.TStoreRPC, info: dgram.RemoteInfo) {
+    public store(message: TStoreRPC, info: dgram.RemoteInfo) {
         /**
          * TODO:
          *  - reply

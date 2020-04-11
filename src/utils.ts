@@ -1,7 +1,7 @@
 import {HASH_SIZE} from './constants';
 import {createHash, BinaryLike} from 'crypto';
 import {RemoteInfo} from 'dgram';
-import {kademlia} from './kademlia';
+import {IContact} from './types/kademlia';
 
 export function xor(a: Buffer, b: Buffer) {
     const length = Math.max(a.length, b.length);
@@ -51,7 +51,7 @@ export function sha1(str: BinaryLike) {
     return createHash('sha1').update(str);
 }
 
-export function makeContact(hexNodeId: string, info: RemoteInfo): kademlia.IContact {
+export function makeContact(hexNodeId: string, info: RemoteInfo): IContact {
     return {
         nodeId: Buffer.from(hexNodeId, 'hex'),
         ip: info.address,
