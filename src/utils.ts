@@ -58,3 +58,16 @@ export function makeContact(hexNodeId: string, info: RemoteInfo): kademlia.ICont
         port: info.port,
     }
 }
+
+export function chunk<T = any>(arr: T[], count: number): T[][] {
+    const result: T[][] = [];
+    const resultLength = Math.ceil(arr.length / count);
+
+    for (let i = 0; i < resultLength; i++) {
+        const index = i * count;
+        const current = arr.slice(index, index + count);
+        result.push(current);
+    }
+
+    return result;
+}

@@ -6,6 +6,7 @@
         "sourceMap": false,
         "outDir": "dist",
         "downlevelIteration": true,
+        "target": "ESNext",
         "lib": ["ESNext"],
         "types": [
             "kademlia",

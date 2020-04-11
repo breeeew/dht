@@ -1,6 +1,6 @@
 import {Contacts} from './contacts';
 import {Node} from './node';
-import {sha1, bucketIndex} from './utils';
+import {sha1, bucketIndex, chunk} from './utils';
 import {ALPHA, K_BUCKET_SIZE} from './constants';
 import {kademlia} from './kademlia';
 
@@ -47,8 +47,24 @@ export class DHT {
         // console.log(this.node.contact().port, closestNodes);
     }
 
-    public async store(key: string) {
+    public async store(key: string, block: string) {
+        const closestNodes = await this.findNode(this.node.contact().nodeId);
+        const closestNodesChunked = chunk<kademlia.IContact>(closestNodes, ALPHA);
 
+        for (const nodes of closestNodesChunked) {
+            try {
+                const promises = nodes.map(node => this.node.callRPC<kademlia.IStoreMessage>('STORE', node, {
+                    data: {
+                        key,
+                        block,
+                    },
+                }));
+
+                await Promise.all(promises);
+            } catch (e) {
+                console.error(e);
+            }
+        }
     }
 
     public async findNode(key: Buffer) {
@@ -56,7 +72,26 @@ export class DHT {
     }
 
     public async findValue(key: string) {
+        const closestNodes = await this.findNode(this.node.contact().nodeId);
+        const closestNodesChunked = chunk<kademlia.IContact>(closestNodes, ALPHA);
 
+        for (const nodes of closestNodesChunked) {
+            try {
+                const promises = nodes.map(node => this.node.callRPC<kademlia.IFindValue, kademlia.TFindResult>('FIND_VALUE', node, {
+                    data: {
+                        key,
+                    },
+                }));
+
+                for await (const result of promises) {
+                    if (typeof result === 'string') {
+                        return result;
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
     }
 
     private async lookup(key: Buffer) {

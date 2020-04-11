@@ -14,25 +14,41 @@ export namespace kademlia {
         port: number;
     }
 
-    export interface IRPCMessage<T = TType> {
+    export interface IRPCMessage<T extends TType | unknown> {
         type: T;
         rpcId: string;
         nodeId: string;
-        data: T extends 'STORE'
-            ? IStoreMessage
-            : T extends 'FIND_VALUE'
-                ? IFindValue
-                : T extends 'FIND_NODE'
-                    ? IFindNode
-                    : void;
+        data: T extends TType ? IRPCArguments[T] : unknown;
+    }
+
+    export interface IRPCArguments {
+        STORE: IStoreMessage;
+        FIND_VALUE: IFindValue;
+        FIND_NODE: IFindNode;
+        PING: void;
+        REPLY: (
+            IResult['STORE'] |
+            IResult['FIND_NODE'] |
+            IResult['FIND_NODE'] |
+            void
+        );
+    }
+
+    export interface IResult {
+        STORE: void;
+        FIND_VALUE: string;
+        FIND_NODE: Array<IContact>;
+        PING: void;
+        REPLY: void;
     }
 
     export interface IFindNode {
         contacts: Array<IContactJSON>;
     }
 
+    export type TFindResult = string | IFindNode
+
     export type TStoreRPC = IRPCMessage<'STORE'>;
-    export type TFindNodeReplyRPC = IRPCMessage<'FIND_NODE_REPLY'>;
     export type TFindValueRPC = IRPCMessage<'FIND_VALUE'>;
 
     export interface IListenOptions {
@@ -60,7 +76,7 @@ export namespace kademlia {
     export interface IStoreMessage {
         key: string;
         block: string; // hex bytes?
-        length: number; // size of full length?
+        length?: number; // size of full length?
     }
 
     export interface IReplyFindNode {
@@ -81,9 +97,9 @@ export namespace kademlia {
         'FIND_VALUE'
     );
 
-    export interface IRPCOptions<T> {
+    export interface IRPCOptions<T extends TType | unknown> {
         rpcId?: string;
-        data?: T;
+        data?: T extends TType ? IRPCArguments[T] : unknown;
         timeout?: number;
     }
 
